@@ -21,7 +21,7 @@ async function upsertPinnedMessage(channel: TextChannel, key: string, embed: Emb
 }
 
 export async function updatePlatformStatusBoard(client: Client) {
-  const channel = await getChannel(client, "platform_status");
+  const channel = await getChannel(client, "pinned_dashboard");
   if (!(channel instanceof TextChannel)) return;
 
   const [

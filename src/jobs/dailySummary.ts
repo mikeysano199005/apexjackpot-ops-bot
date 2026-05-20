@@ -54,5 +54,5 @@ export async function runDailySummary(client: Client) {
     .setTimestamp()
     .setFooter({ text: "Daily digest · Generated at 9:00 IST" });
 
-  await sendToChannel(client, "daily_reports", { embeds: [embed] });
+  await sendToChannel(client, "daily_summary", { embeds: [embed] });
 }

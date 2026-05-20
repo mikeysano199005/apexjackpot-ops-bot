@@ -44,7 +44,7 @@ export async function runVelocityChecks(client: Client) {
       )
       .setTimestamp();
 
-    await sendToChannel(client, "fraud_alerts", { embeds: [embed] });
+    await sendToChannel(client, "fraud_flags", { embeds: [embed] });
   }
 }
 
@@ -87,7 +87,7 @@ export async function runIpMultiAccountCheck(client: Client) {
       )
       .setTimestamp();
 
-    await sendToChannel(client, "fraud_alerts", { embeds: [embed] });
+    await sendToChannel(client, "fraud_flags", { embeds: [embed] });
   }
 }
 
@@ -124,7 +124,7 @@ export async function runBonusAbuseCheck(client: Client) {
       )
       .setTimestamp();
 
-    await sendToChannel(client, "fraud_alerts", { embeds: [embed] });
+    await sendToChannel(client, "fraud_flags", { embeds: [embed] });
   }
 }
 
@@ -165,6 +165,6 @@ export async function runSharedBankCheck(client: Client) {
       )
       .setTimestamp();
 
-    await sendToChannel(client, "fraud_alerts", { embeds: [embed] });
+    await sendToChannel(client, "fraud_flags", { embeds: [embed] });
   }
 }

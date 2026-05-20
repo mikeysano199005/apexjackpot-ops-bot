@@ -25,14 +25,14 @@ export async function setBotConfigKey(key: string, value: unknown): Promise<void
 // ─── Channel Map ──────────────────────────────────────────────────────────────
 
 export async function getChannelMap(): Promise<Partial<Record<ChannelKey, string>>> {
-  const { data } = await supabase.from("bot_channels").select("channel_key, channel_id");
+  const { data } = await supabase.from("bot_channels").select("key, channel_id");
   if (!data) return {};
-  return Object.fromEntries(data.map((r: { channel_key: string; channel_id: string }) => [r.channel_key, r.channel_id])) as Partial<Record<ChannelKey, string>>;
+  return Object.fromEntries(data.map((r: { key: string; channel_id: string }) => [r.key, r.channel_id])) as Partial<Record<ChannelKey, string>>;
 }
 
 export async function saveChannelMap(map: Partial<Record<ChannelKey, string>>): Promise<void> {
-  const rows = Object.entries(map).map(([channel_key, channel_id]) => ({ channel_key, channel_id }));
-  await supabase.from("bot_channels").upsert(rows, { onConflict: "channel_key" });
+  const rows = Object.entries(map).map(([key, channel_id]) => ({ key, channel_id }));
+  await supabase.from("bot_channels").upsert(rows, { onConflict: "key" });
 }
 
 // ─── Incidents ────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ export async function createIncident(incident: Omit<Incident, "id">): Promise<In
 export async function resolveIncident(id: string, resolution: string): Promise<void> {
   await supabase.from("bot_incidents").update({
     resolved_at: new Date().toISOString(),
-    resolution,
+    summary: resolution,
   }).eq("id", id);
 }
 
@@ -118,17 +118,17 @@ export async function removeSubscription(discordId: string, eventType: string): 
 // ─── Blacklist ────────────────────────────────────────────────────────────────
 
 export async function addBlacklist(type: string, value: string, reason: string, addedBy: string): Promise<void> {
-  await supabase.from("blacklists").upsert({
+  await supabase.from("bot_blacklist").upsert({
     type, value, reason, added_by: addedBy, created_at: new Date().toISOString(),
   }, { onConflict: "type,value" });
 }
 
 export async function removeBlacklist(type: string, value: string): Promise<void> {
-  await supabase.from("blacklists").delete().eq("type", type).eq("value", value);
+  await supabase.from("bot_blacklist").delete().eq("type", type).eq("value", value);
 }
 
 export async function checkBlacklist(value: string): Promise<{ type: string; reason: string } | null> {
-  const { data } = await supabase.from("blacklists").select("type, reason").eq("value", value).maybeSingle();
+  const { data } = await supabase.from("bot_blacklist").select("type, reason").eq("value", value).maybeSingle();
   return data ?? null;
 }
 

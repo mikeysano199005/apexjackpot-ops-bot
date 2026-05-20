@@ -79,5 +79,5 @@ export async function runWeeklyDigest(client: Client) {
     .setTimestamp()
     .setFooter({ text: "Weekly digest · Every Monday 9:00 IST" });
 
-  await sendToChannel(client, "daily_reports", { embeds: [embed] });
+  await sendToChannel(client, "weekly_digest", { embeds: [embed] });
 }
