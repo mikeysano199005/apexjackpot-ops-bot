@@ -6,8 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx watch src/index.ts",
-    "deploy-commands": "tsx src/deploy-commands.ts"
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "deploy-commands": "tsx --env-file=.env src/deploy-commands.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",
@@ -15,6 +15,9 @@
     "discord.js": "^14.16.0",
     "express": "^4.19.0",
     "node-cron": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
