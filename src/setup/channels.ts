@@ -97,6 +97,7 @@ export const CATEGORY_DEFS: CategoryDef[] = [
   {
     name: "CONFIG", emoji: "🔧",
     channels: [
+      { key: "commands_guide", name: "commands-guide", topic: "Full slash command reference — auto-posted by the bot", roles: ["ReadOnly", "Finance", "Support", "DevOps", "BotAdmin"] },
       { key: "bot_commands", name: "bot-commands", topic: "Use slash commands here", roles: ["ReadOnly", "Finance", "Support", "DevOps", "BotAdmin"] },
     ],
   },

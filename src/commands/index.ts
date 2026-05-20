@@ -10,6 +10,7 @@ import { configCommand } from "./config";
 import { moderationCommands } from "./moderation";
 import { oncallCommand, shiftCommand, subscribeCommand, unsubscribeCommand } from "./oncall";
 import { askCommand, riskCommand } from "./ask";
+import { maintenanceCommand } from "./maintenance";
 
 export const commands = [
   setupCommand,
@@ -26,6 +27,7 @@ export const commands = [
   unsubscribeCommand,
   askCommand,
   riskCommand,
+  maintenanceCommand,
 ];
 
 export async function registerCommands(): Promise<void> {

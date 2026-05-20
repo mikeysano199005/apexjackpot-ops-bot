@@ -1,5 +1,6 @@
 import { Client, EmbedBuilder, ColorResolvable } from "discord.js";
 import { sendToChannel } from "../lib/channels";
+import { sendToUserChannel } from "../lib/user-channels";
 import { COLORS, fmt, fmtTime } from "../lib/embeds";
 import { getBotConfig } from "../supabase";
 
@@ -22,6 +23,9 @@ export async function handleDepositCompleted(client: Client, p: Record<string, u
 
   await sendToChannel(client, "deposits", { embeds: [embed] });
   await sendToChannel(client, "live_feed", { content: `💵 Deposit **${fmt(amount)}** via ${String(p.gateway ?? "—")} · ${String(p.email ?? "—")}` });
+  await sendToUserChannel(client, String(p.user_id ?? ""), {
+    content: `💵 **Deposit completed** — ${fmt(amount)} via ${String(p.gateway ?? "—")}`,
+  });
 
   if (isLarge) {
     const bigEmbed = new EmbedBuilder()
@@ -49,6 +53,9 @@ export async function handleDepositFailed(client: Client, p: Record<string, unkn
     )
     .setTimestamp().setFooter({ text: "ApexJackpot Ops" });
   await sendToChannel(client, "deposits", { embeds: [embed] });
+  await sendToUserChannel(client, String(p.user_id ?? ""), {
+    content: `❌ **Deposit failed** — ${fmt(Number(p.amount_cents ?? 0))} via ${String(p.gateway ?? "—")}: ${String(p.error ?? "Unknown error")}`,
+  });
 }
 
 export async function handleWithdrawalRequested(client: Client, p: Record<string, unknown>) {
@@ -63,6 +70,9 @@ export async function handleWithdrawalRequested(client: Client, p: Record<string
     )
     .setTimestamp().setFooter({ text: "ApexJackpot Ops" });
   await sendToChannel(client, "withdrawals", { embeds: [embed] });
+  await sendToUserChannel(client, String(p.user_id ?? ""), {
+    content: `📤 **Withdrawal requested** — ${fmt(Number(p.amount_cents ?? 0))} · pending approval`,
+  });
 }
 
 export async function handleWithdrawalApproved(client: Client, p: Record<string, unknown>) {
@@ -78,6 +88,9 @@ export async function handleWithdrawalApproved(client: Client, p: Record<string,
     .setTimestamp().setFooter({ text: "ApexJackpot Ops" });
   await sendToChannel(client, "withdrawals", { embeds: [embed] });
   await sendToChannel(client, "live_feed", { content: `✅ Withdrawal **${fmt(Number(p.amount_cents ?? 0))}** approved for ${String(p.email ?? "—")}` });
+  await sendToUserChannel(client, String(p.user_id ?? ""), {
+    content: `✅ **Withdrawal approved** — ${fmt(Number(p.amount_cents ?? 0))}`,
+  });
 }
 
 export async function handleWithdrawalFailed(client: Client, p: Record<string, unknown>) {
@@ -93,6 +106,9 @@ export async function handleWithdrawalFailed(client: Client, p: Record<string, u
     .setTimestamp().setFooter({ text: "ApexJackpot Ops" });
   await sendToChannel(client, "withdrawals", { embeds: [embed] });
   await sendToChannel(client, "gateway_status", { embeds: [embed] });
+  await sendToUserChannel(client, String(p.user_id ?? ""), {
+    content: `❌ **Withdrawal failed** — ${fmt(Number(p.amount_cents ?? 0))}: ${String(p.error ?? "Payment error")}`,
+  });
 }
 
 export async function handleBonusCredited(client: Client, p: Record<string, unknown>) {
@@ -106,6 +122,9 @@ export async function handleBonusCredited(client: Client, p: Record<string, unkn
     )
     .setTimestamp().setFooter({ text: "ApexJackpot Ops" });
   await sendToChannel(client, "bonus_tracking", { embeds: [embed] });
+  await sendToUserChannel(client, String(p.user_id ?? ""), {
+    content: `🎁 **Bonus credited** — ${fmt(Number(p.amount_cents ?? 0))}${p.promo_code ? ` (${String(p.promo_code)})` : ""}`,
+  });
 }
 
 export async function handleCommissionPaid(client: Client, p: Record<string, unknown>) {
@@ -119,6 +138,9 @@ export async function handleCommissionPaid(client: Client, p: Record<string, unk
     )
     .setTimestamp().setFooter({ text: "ApexJackpot Ops" });
   await sendToChannel(client, "agent_commissions", { embeds: [embed] });
+  await sendToUserChannel(client, String(p.user_id ?? ""), {
+    content: `💰 **Commission paid** — ${fmt(Number(p.amount_cents ?? 0))}`,
+  });
 }
 
 export async function handleRefundIssued(client: Client, p: Record<string, unknown>) {
@@ -133,4 +155,7 @@ export async function handleRefundIssued(client: Client, p: Record<string, unkno
     )
     .setTimestamp().setFooter({ text: "ApexJackpot Ops" });
   await sendToChannel(client, "refunds", { embeds: [embed] });
+  await sendToUserChannel(client, String(p.user_id ?? ""), {
+    content: `↩️ **Refund issued** — ${fmt(Number(p.amount_cents ?? 0))}: ${String(p.reason ?? "—")}`,
+  });
 }

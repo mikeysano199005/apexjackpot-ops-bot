@@ -4,6 +4,7 @@ import { setupRoles, getRoleMap } from "../setup/roles";
 import { setupChannels, CATEGORY_DEFS } from "../setup/channels";
 import { getChannelMap } from "../supabase";
 import { COLORS } from "../lib/embeds";
+import { postCommandsGuide } from "../lib/commands-guide";
 
 export const setupCommand = {
   data: new SlashCommandBuilder()
@@ -11,7 +12,8 @@ export const setupCommand = {
     .setDescription("Bot server setup")
     .addSubcommand(s => s.setName("run").setDescription("Run full server setup — creates all channels and roles"))
     .addSubcommand(s => s.setName("reset").setDescription("Tear down and recreate all channels and roles"))
-    .addSubcommand(s => s.setName("status").setDescription("Check which channels exist vs missing")),
+    .addSubcommand(s => s.setName("status").setDescription("Check which channels exist vs missing"))
+    .addSubcommand(s => s.setName("guide").setDescription("Re-post the commands guide to #commands-guide")),
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!hasRole(interaction.member as any, "BotAdmin")) {
@@ -40,11 +42,14 @@ export const setupCommand = {
       const channelMap = await setupChannels(guild, roleMap);
       const count = Object.keys(channelMap).length;
 
+      // Post the commands guide into #commands-guide (fire-and-forget — don't fail setup if this errors)
+      postCommandsGuide(interaction.client).catch(err => console.error("[Bot] Guide post failed:", err));
+
       const embed = new EmbedBuilder()
         .setColor(COLORS.success as ColorResolvable)
         .setTitle("✅ Bot Setup Complete")
         .setDescription(`Created **${count}** channels across **${CATEGORY_DEFS.length}** categories.\nRoles: ${Object.keys(roleMap).join(", ")}`)
-        .addFields({ name: "Next Steps", value: "1. Assign @BotAdmin to yourself\n2. Set on-call staff with `/oncall set`\n3. Configure thresholds with `/config`" })
+        .addFields({ name: "Next Steps", value: "1. Assign @BotAdmin to yourself\n2. Set on-call staff with `/oncall set`\n3. Configure thresholds with `/config`\n4. See #commands-guide for full command reference" })
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
@@ -69,6 +74,17 @@ export const setupCommand = {
       }
 
       await interaction.editReply({ content: lines.join("\n") });
+    }
+
+    if (sub === "guide") {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        await postCommandsGuide(interaction.client);
+        await interaction.editReply("✅ Commands guide posted to #commands-guide.");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await interaction.editReply(`❌ Failed to post guide: ${msg}`);
+      }
     }
   },
 };

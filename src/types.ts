@@ -125,7 +125,8 @@ export type ChannelKey =
   | "incidents"
   | "errors"
   | "bot_logs"
-  | "bot_commands";
+  | "bot_commands"
+  | "commands_guide";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 

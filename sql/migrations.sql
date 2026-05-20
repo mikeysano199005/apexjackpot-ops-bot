@@ -135,3 +135,15 @@ CREATE TABLE IF NOT EXISTS ml_topup_requests (
 
 CREATE INDEX IF NOT EXISTS ml_topup_requests_user_status ON ml_topup_requests (user_id, status);
 CREATE INDEX IF NOT EXISTS ml_topup_requests_status ON ml_topup_requests (status);
+
+-- ============================================================
+-- User Activity Channels (live dashboard)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS bot_user_channels (
+  user_id      TEXT PRIMARY KEY,
+  channel_id   TEXT NOT NULL,
+  display_name TEXT,
+  email        TEXT,
+  created_at   TIMESTAMPTZ DEFAULT now()
+);
