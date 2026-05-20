@@ -13,6 +13,26 @@ async function callApp(path: string, body: Record<string, unknown>): Promise<{ s
   return res.json() as Promise<{ success: boolean; error?: string }>;
 }
 
+// Looks up user_id by email — tries profiles table first, falls back to auth.admin
+async function getUserIdByEmail(email: string): Promise<string | null> {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+  if (profile?.id) return profile.id;
+
+  // Fall back to auth admin API (works even if profiles has no email column)
+  try {
+    const { data, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    if (error || !data) return null;
+    const found = data.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+    return found?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const banCommand = {
   data: new SlashCommandBuilder()
     .setName("ban")
@@ -26,9 +46,9 @@ const banCommand = {
     await interaction.deferReply({ ephemeral: true });
     const email = interaction.options.getString("email", true);
     const reason = interaction.options.getString("reason", true);
-    const { data: profile } = await supabase.from("profiles").select("id").eq("email", email).single();
-    if (!profile) { await interaction.editReply("❌ User not found."); return; }
-    const result = await callApp("/api/admin/users/ban", { userId: profile.id, reason });
+    const userId = await getUserIdByEmail(email);
+    if (!userId) { await interaction.editReply("❌ User not found."); return; }
+    const result = await callApp("/api/admin/users/ban", { userId, reason });
     await interaction.editReply(result.success ? `✅ User ${email} banned.` : `❌ ${result.error}`);
   },
 };
@@ -44,9 +64,9 @@ const unbanCommand = {
     }
     await interaction.deferReply({ ephemeral: true });
     const email = interaction.options.getString("email", true);
-    const { data: profile } = await supabase.from("profiles").select("id").eq("email", email).single();
-    if (!profile) { await interaction.editReply("❌ User not found."); return; }
-    const result = await callApp("/api/admin/users/unban", { userId: profile.id });
+    const userId = await getUserIdByEmail(email);
+    if (!userId) { await interaction.editReply("❌ User not found."); return; }
+    const result = await callApp("/api/admin/users/unban", { userId });
     await interaction.editReply(result.success ? `✅ User ${email} unbanned.` : `❌ ${result.error}`);
   },
 };
@@ -65,6 +85,7 @@ const watchCommand = {
       .setDescription("Remove from watchlist")
       .addStringOption(o => o.setName("email").setDescription("User email").setRequired(true)))
     .addSubcommand(s => s.setName("list").setDescription("View watchlist")),
+
   async execute(interaction: ChatInputCommandInteraction) {
     if (!hasRole(interaction.member as any, "Support")) {
       await interaction.reply({ content: "❌ You need @Support role.", ephemeral: true }); return;
@@ -73,25 +94,49 @@ const watchCommand = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === "add") {
-      const email = interaction.options.getString("email", true);
+      const email = interaction.options.getString("email", true).toLowerCase().trim();
       const reason = interaction.options.getString("reason", true);
-      const { data: profile } = await supabase.from("profiles").select("id").eq("email", email).single();
-      if (!profile) { await interaction.editReply("❌ User not found."); return; }
-      await addToWatchlist({ user_id: profile.id, user_email: email, reason, added_by: interaction.user.id, added_at: new Date().toISOString() });
-      await interaction.editReply(`✅ ${email} added to watchlist. You'll be DM'd on their next action.`);
+      const userId = await getUserIdByEmail(email);
+      if (!userId) { await interaction.editReply("❌ User not found."); return; }
+      await addToWatchlist({
+        user_id: userId,
+        user_email: email,
+        reason,
+        added_by: interaction.user.id,
+        added_at: new Date().toISOString(),
+      });
+      await interaction.editReply(`✅ **${email}** added to watchlist.\nYou'll be alerted in #watchlist-alerts on their next action.`);
     }
+
     if (sub === "remove") {
-      const email = interaction.options.getString("email", true);
-      const { data: profile } = await supabase.from("profiles").select("id").eq("email", email).single();
-      if (!profile) { await interaction.editReply("❌ User not found."); return; }
-      await removeFromWatchlist(profile.id);
-      await interaction.editReply(`✅ ${email} removed from watchlist.`);
+      const email = interaction.options.getString("email", true).toLowerCase().trim();
+      const userId = await getUserIdByEmail(email);
+      if (!userId) { await interaction.editReply("❌ User not found."); return; }
+      await removeFromWatchlist(userId);
+      await interaction.editReply(`✅ **${email}** removed from watchlist.`);
     }
+
     if (sub === "list") {
       const list = await getWatchlist();
-      if (list.length === 0) { await interaction.editReply("📋 Watchlist is empty."); return; }
-      const lines = list.map(w => `• **${w.user_email}** — ${w.reason} (added ${fmtTime(w.added_at)})`);
-      await interaction.editReply({ content: `**Watchlist (${list.length}):**\n${lines.join("\n")}` });
+      if (list.length === 0) {
+        await interaction.editReply("📋 Watchlist is empty.");
+        return;
+      }
+
+      // Split into pages of 10 to stay within embed limits
+      const page = list.slice(0, 20);
+      const embed = new EmbedBuilder()
+        .setColor(COLORS.warning as ColorResolvable)
+        .setTitle(`👁️ Watchlist (${list.length} user${list.length !== 1 ? "s" : ""})`)
+        .setDescription(
+          page.map((w, i) =>
+            `**${i + 1}.** \`${w.user_email}\`\n  Reason: ${w.reason}\n  Added: ${fmtTime(w.added_at)}`,
+          ).join("\n\n"),
+        )
+        .setTimestamp()
+        .setFooter({ text: list.length > 20 ? `Showing first 20 of ${list.length}` : "ApexJackpot Ops" });
+
+      await interaction.editReply({ embeds: [embed] });
     }
   },
 };
@@ -121,6 +166,7 @@ const blacklistCommand = {
       .setName("check")
       .setDescription("Check if a value is blacklisted")
       .addStringOption(o => o.setName("value").setDescription("Value to check").setRequired(true))),
+
   async execute(interaction: ChatInputCommandInteraction) {
     if (!hasRole(interaction.member as any, "Support")) {
       await interaction.reply({ content: "❌ You need @Support role.", ephemeral: true }); return;

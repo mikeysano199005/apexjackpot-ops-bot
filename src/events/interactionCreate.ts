@@ -21,17 +21,19 @@ export async function handleInteractionCreate(_client: unknown, interaction: Int
       return;
     }
   } catch (err) {
-    console.error("[interactionCreate] Error:", err);
-    const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+    console.error("[interactionCreate] Unhandled error:", err);
+    const msg = err instanceof Error ? `${err.message}` : "An unexpected error occurred.";
     try {
       if ("replied" in interaction && "deferred" in interaction) {
         const i = interaction as any;
         if (i.replied || i.deferred) {
-          await i.editReply(`❌ ${msg}`);
+          await i.editReply({ content: `❌ Error: ${msg}` });
         } else {
-          await i.reply({ content: `❌ ${msg}`, ephemeral: true });
+          await i.reply({ content: `❌ Error: ${msg}`, ephemeral: true });
         }
       }
-    } catch { /* swallow reply errors */ }
+    } catch (replyErr) {
+      console.error("[interactionCreate] Failed to send error reply:", replyErr);
+    }
   }
 }

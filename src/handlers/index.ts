@@ -22,16 +22,24 @@ export async function handleEvent(client: Client, event: BotEvent): Promise<void
   const dedupKey = `${event.type}:${JSON.stringify(event.payload).slice(0, 100)}`;
   if (isDuplicate(dedupKey, cfg.dedup_window_seconds)) return;
 
-  // Watchlist check — DM subscriber if watched user triggers event
+  // Watchlist check — DM watcher, fall back to #watchlist-alerts channel
   const userId = String(event.payload.user_id ?? "");
   if (userId) {
     const watchlist = await getWatchlist();
     const watched = watchlist.find(w => w.user_id === userId);
     if (watched) {
+      const alertText = `👁 **Watched user activity**\n**User:** ${String(event.payload.email ?? userId)}\n**Event:** \`${event.type}\`\n**Reason watched:** ${watched.reason}`;
+      let dmSent = false;
       try {
         const watcher = await client.users.fetch(watched.added_by);
-        await watcher.send(`👁 **Watched user activity** — ${String(event.payload.email ?? userId)}\nEvent: \`${event.type}\`\nReason watched: ${watched.reason}`);
+        await watcher.send(alertText);
+        dmSent = true;
       } catch {}
+      if (!dmSent) {
+        await sendToChannel(client, "watchlist_alerts", {
+          content: `<@${watched.added_by}> ${alertText}`,
+        });
+      }
     }
   }
 
